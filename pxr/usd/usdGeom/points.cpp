@@ -290,7 +290,15 @@ _ComputeExtentForPoints(
             return UsdGeomPointBased::ComputeExtent(points, extent);
         }
     }
-    
+
+    // A single width with constant interpolation applies to every point, so
+    // expand it to match the points, as ComputeExtent requires one width per
+    // point.
+    if (widths.size() == 1 && points.size() != 1 &&
+        pointsSchema.GetWidthsInterpolation() == UsdGeomTokens->constant) {
+        widths = VtFloatArray(points.size(), widths[0]);
+    }
+
     if (transform) {
         return UsdGeomPoints::ComputeExtent(points, widths, *transform, extent);
     } else {

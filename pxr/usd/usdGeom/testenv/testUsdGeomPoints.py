@@ -47,5 +47,33 @@ class TestUsdGeomPoints(unittest.TestCase):
             self.assertEqual(invalid.GetPointCount(
                 Usd.TimeCode.EarliestTime()), 0)
 
+    def test_ComputeExtentFromPluginsWidthsInterpolation(self):
+        stage = Usd.Stage.CreateInMemory()
+        points = UsdGeom.Points.Define(stage, '/Points')
+
+        def computeExtent():
+            return UsdGeom.Boundable.ComputeExtentFromPlugins(
+                points, Usd.TimeCode.Default())
+
+        for pointValues in ([(0, 0, 0), (1, 2, 3), (-1, 0, 4)], [(1, 2, 3)]):
+            points.GetPointsAttr().Set(pointValues)
+
+            # One width per point.
+            points.CreateWidthsAttr([0.1] * len(pointValues))
+            points.SetWidthsInterpolation(UsdGeom.Tokens.vertex)
+            expected = computeExtent()
+            self.assertEqual(len(expected), 2)
+
+            # A single width with constant interpolation applies to all
+            # points.
+            points.GetWidthsAttr().Set([0.1])
+            points.SetWidthsInterpolation(UsdGeom.Tokens.constant)
+            self.assertEqual(computeExtent(), expected)
+
+        # A single width that does not match the interpolation is invalid.
+        points.GetPointsAttr().Set([(0, 0, 0), (1, 2, 3), (-1, 0, 4)])
+        points.SetWidthsInterpolation(UsdGeom.Tokens.vertex)
+        self.assertIsNone(computeExtent())
+
 if __name__ == '__main__':
     unittest.main()
